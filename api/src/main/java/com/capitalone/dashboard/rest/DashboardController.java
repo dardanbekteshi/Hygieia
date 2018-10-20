@@ -172,7 +172,7 @@ public class DashboardController {
     public ResponseEntity<WidgetResponse> updateWidget(@PathVariable ObjectId id,
                                                        @PathVariable ObjectId widgetId,
                                                        @RequestBody WidgetRequest request) {
-        Component component = dashboardService.associateCollectorToComponent(
+            Component component = dashboardService.associateCollectorToComponent(
                 request.getComponentId(), request.getCollectorItemIds());
 
         Dashboard dashboard = dashboardService.get(id);
@@ -312,8 +312,11 @@ public class DashboardController {
 
         Dashboard dashboard = dashboardService.get(id);
         Widget widget =dashboardService.getWidget(dashboard, widgetId);
-        dashboardService.deleteWidget(dashboard, widget,request.getComponentId());
+        dashboardService.deleteWidget(dashboard, widget,request.getComponentId(), request.getCollectorItemIds());
 
+        //TODO: we are sending as a response the component from line 310
+        // but the component is again changed in the deleteWidget()
+        // shouldn't the delete widget return the modified Component and send that component as a response?
         return ResponseEntity.ok().body(new WidgetResponse(component, null));
     }
 

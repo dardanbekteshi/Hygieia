@@ -1,11 +1,6 @@
 package com.capitalone.dashboard.service;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import com.capitalone.dashboard.ApiSettings;
@@ -269,8 +264,9 @@ public class DashboardServiceImpl implements DashboardService {
                         toSaveCollectorItems.put(ci.getId(), ci);
                     }
                 }
-                // remove all collector items of a type
-                component.getCollectorItems().remove(collector.getCollectorType());
+                // only remove the widget (collectorItem) which is created/updated/deleted, not all of them
+                removeCollectorItemFromComponent(collectorItemId, componentId);
+                // TODO: but this still disables all the other collectorItems of that type, and we need to address that somehow
             }
         }
 
@@ -533,6 +529,7 @@ public class DashboardServiceImpl implements DashboardService {
         if(componentId!=null){
             com.capitalone.dashboard.model.Component component = componentRepository.findOne(componentId);
             for (CollectorType cType :collectorTypesToDelete) {
+                //TODO: dardan -> don't remove the whole Type?
                 component.getCollectorItems().remove(cType);
             }
             componentRepository.save(component);
@@ -540,9 +537,19 @@ public class DashboardServiceImpl implements DashboardService {
         return dashboard;
     }
 
+    private void removeCollectorItemFromComponent(ObjectId collectorItemId, ObjectId componentId){
+        Component component = componentRepository.findOne(componentId);
+        CollectorItem collectorItem = collectorItemRepository.findOne(collectorItemId);
+        Collector collector = collectorRepository.findOne(collectorItem.getCollectorId());
+
+        Map<CollectorType,List<CollectorItem>> typeToCollectorItems  = component.getCollectorItems();
+        List<CollectorItem> items = typeToCollectorItems.get(collector.getCollectorType());
+
+        items.removeIf(ci -> ci.getId().equals(collectorItemId));
+    }
 
     @Override
-    public void deleteWidget(Dashboard dashboard, Widget widget,ObjectId componentId) {
+    public void deleteWidget(Dashboard dashboard, Widget widget, ObjectId componentId, List<ObjectId> collectorItemIds) {
         int index = dashboard.getWidgets().indexOf(widget);
         dashboard.getWidgets().set(index, null);
         List<Widget> widgets = dashboard.getWidgets();
@@ -554,25 +561,14 @@ public class DashboardServiceImpl implements DashboardService {
         dashboard.setWidgets(updatedWidgets);
         dashboardRepository.save(dashboard);
 
-        String widgetName = widget.getName();
 
-        List<CollectorType> collectorTypesToDelete = new ArrayList<>();
-        CollectorType cType = findCollectorType(widgetName);
-        collectorTypesToDelete.add(cType);
-        if(widgetName.equalsIgnoreCase("codeanalysis")){
-            collectorTypesToDelete.add(CollectorType.CodeQuality);
-            collectorTypesToDelete.add(CollectorType.StaticSecurityScan);
-            collectorTypesToDelete.add(CollectorType.LibraryPolicy);
-        }
         if(componentId!=null){
             Component component = componentRepository.findOne(componentId);
-            for (CollectorType c:collectorTypesToDelete) {
-                component.getCollectorItems().remove(c);
+            for(ObjectId collectorItemId:collectorItemIds){
+                removeCollectorItemFromComponent(collectorItemId, componentId);
+                componentRepository.save(component);
             }
-
-            componentRepository.save(component);
         }
-
     }
 
 
