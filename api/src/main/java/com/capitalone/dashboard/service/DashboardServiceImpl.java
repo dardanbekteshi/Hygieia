@@ -546,6 +546,7 @@ public class DashboardServiceImpl implements DashboardService {
         List<CollectorItem> items = typeToCollectorItems.get(collector.getCollectorType());
 
         items.removeIf(ci -> ci.getId().equals(collectorItemId));
+        componentRepository.save(component);
     }
 
     @Override
@@ -566,7 +567,7 @@ public class DashboardServiceImpl implements DashboardService {
             Component component = componentRepository.findOne(componentId);
             for(ObjectId collectorItemId:collectorItemIds){
                 removeCollectorItemFromComponent(collectorItemId, componentId);
-                componentRepository.save(component);
+//                componentRepository.save(component);
             }
         }
     }
